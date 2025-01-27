@@ -59,16 +59,7 @@
           "width": 0.0
         }
       ],
-      "drc_exclusions": [
-        "courtyards_overlap|180204951|120670001|67247d36-7e8d-4acd-8f9a-97b83c9b9797|69091f98-482f-42b4-a25f-831e736f32eb",
-        "courtyards_overlap|180279999|119381567|54cceb99-f8fd-4de2-a4f7-a7787825ec15|69091f98-482f-42b4-a25f-831e736f32eb",
-        "footprint_type_mismatch|150000000|66940000|d03852d0-47b1-411a-9364-fc8a5bac5910|00000000-0000-0000-0000-000000000000",
-        "silk_edge_clearance|145300000|64000008|88480bd4-cebe-4adb-a150-f01fbdc60039|1557c0ec-fd8d-412d-9134-74e301274471",
-        "silk_edge_clearance|147950000|81057000|d7baa6a4-4cfc-4cf9-a128-e57027c9129d|4728614b-6f69-4e7e-8999-66d1d77a922b",
-        "silk_edge_clearance|154700000|64000008|88480bd4-cebe-4adb-a150-f01fbdc60039|00032bb6-b8a2-4150-9e2b-ca11fc2f3169",
-        "silk_over_copper|119500000|85250000|3584f60e-a53b-4230-84d6-e28807dca929|00000000-0000-0000-0000-000000000000",
-        "silk_over_copper|180543653|85285825|850b468b-5e62-4347-93ef-8eda0dbc4a2b|00000000-0000-0000-0000-000000000000"
-      ],
+      "drc_exclusions": [],
       "meta": {
         "version": 2
       },
@@ -666,7 +657,7 @@
       "filter_string": "",
       "group_symbols": true,
       "name": "",
-      "sort_asc": true,
+      "sort_asc": false,
       "sort_field": "LCSC"
     },
     "connection_grid_size": 50.0,
