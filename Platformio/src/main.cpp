@@ -80,6 +80,8 @@ lv_obj_t* yearButtonL;
 lv_obj_t* weekdayButtonL;
 lv_obj_t* minuteButtonL;
 lv_obj_t* hourButtonL;
+lv_obj_t* formatButton;
+lv_obj_t* formatButtonL;
 lv_timer_t * returnTimer = NULL;
 lv_timer_t * hintTimer = NULL;
 bool buttonHintsVisible = true;
@@ -106,6 +108,9 @@ datetime_t t = {
 datetime_t tOld;
 const char* weekdays_GERMAN[7] = {"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"};
 const char* months_GERMAN[13] = {"", "Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"};
+const char* weekdays_ENGLISH[7] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+const char* months_ENGLISH[13] = {"", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
+boolean hourFormat24 = true;
 
 // State machine declarations
 enum FSM_STATE {WAKEUP, IDLE, FEED, CONTACT, CHARGE, ENDCHARGE};
@@ -188,7 +193,7 @@ static void keypad_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
     }
   }
 
-  /*Save the pressed key and set the state*/
+  // Save the pressed key and set the state
   if(key != 0) {
       data->state = LV_INDEV_STATE_PR;
       last_key = key;
@@ -196,7 +201,7 @@ static void keypad_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
       data->state = LV_INDEV_STATE_REL;
   }
 
-  /*Set the last pressed key*/  
+  // Set the last pressed key
   data->key = last_key;
 }
 
@@ -243,7 +248,6 @@ static void weekday_button_event_cb(lv_event_t * e)
     if(lv_event_get_code(e) == LV_EVENT_CLICKED) {
         t.dotw = (t.dotw + 1) % 7;
         rtc_set_datetime(&t);
-        Serial.println(t.dotw);
         lv_obj_t * btn = lv_event_get_target(e);
         lv_obj_t * label = lv_obj_get_child(btn, 0);
         lv_label_set_text(label, weekdays_GERMAN[t.dotw]);
@@ -265,6 +269,16 @@ static void minute_button_event_cb(lv_event_t * e)
         t.min = (t.min + 1) % 60; // Cycle through minutes 0-59
         rtc_set_datetime(&t);
         lv_label_set_text_fmt(minuteButtonL, "%02d", t.min);
+    }
+}
+
+static void format_button_event_cb(lv_event_t * e)
+{
+    if(lv_event_get_code(e) == LV_EVENT_CLICKED) {
+        hourFormat24 = !hourFormat24;
+        if(hourFormat24) lv_label_set_text_fmt(formatButtonL, "24h");
+        else lv_label_set_text_fmt(formatButtonL, "12h");
+        //Serial.println(hourFormat24);
     }
 }
 
@@ -445,7 +459,7 @@ void fsm_endcharge(){
     if(currentServoPos > LowerServoLimit) servo.writeMicroseconds(currentServoPos--);
     delay(3);
   }
-  delay(1000);
+  delay(5000); // give the DS2712 charger some time to reset
 
   fsm_currentState = IDLE;
 
@@ -701,6 +715,25 @@ void setup() {
   lv_obj_set_style_outline_opa(minuteButton, 255, LV_STATE_FOCUS_KEY);
   lv_obj_add_event_cb(minuteButton, minute_button_event_cb, LV_EVENT_CLICKED, NULL);
 
+  // Hour Format Setting
+
+  tempLabel = lv_label_create(tab2);
+  lv_label_set_text(tempLabel, "Format:");
+  lv_obj_set_style_text_color(tempLabel, lv_color_white(), LV_PART_MAIN);
+  lv_obj_set_style_text_font(tempLabel, &lv_font_montserrat_16, LV_PART_MAIN);
+  lv_obj_center(tempLabel);
+  lv_obj_align(tempLabel, LV_ALIGN_TOP_LEFT, 0, 118);
+
+  formatButton = lv_btn_create(tab2);
+  formatButtonL = lv_label_create(formatButton);
+  lv_obj_align(formatButton, LV_ALIGN_TOP_LEFT, 70, 112);
+  lv_obj_set_size(formatButton, 50, 30);
+  lv_obj_set_style_bg_color(formatButton, lv_color_black(), LV_PART_MAIN);
+  lv_label_set_text(formatButtonL, "24h");
+  lv_obj_set_style_text_font(formatButtonL, &lv_font_montserrat_16, LV_PART_MAIN);
+  lv_obj_align(formatButtonL, LV_ALIGN_CENTER, 0, 0);
+  lv_obj_set_style_outline_opa(formatButton, 255, LV_STATE_FOCUS_KEY);
+  lv_obj_add_event_cb(formatButton, format_button_event_cb, LV_EVENT_CLICKED, NULL);
 
   // Return Button
 
@@ -725,6 +758,7 @@ void setup() {
   lv_group_add_obj(group, weekdayButton);
   lv_group_add_obj(group, hourButton);
   lv_group_add_obj(group, minuteButton);
+  lv_group_add_obj(group, formatButton);
   lv_group_add_obj(group, returnButton);
   /* Assign the input device to the group */
   lv_indev_set_group(indev, group);
@@ -816,7 +850,8 @@ void loop() {
   // Update the clock display
   rtc_get_datetime(&t);
   if(tOld.min != t.min || tOld.hour != t.hour){ // avoid updating the time label too often (increases FPS)
-    lv_label_set_text_fmt(timeLabel, "%d:%02d", t.hour, t.min);
+    if(!hourFormat24 && t.hour > 12) lv_label_set_text_fmt(timeLabel, "%d:%02d", t.hour-12, t.min);
+    else lv_label_set_text_fmt(timeLabel, "%d:%02d", t.hour, t.min);
   }
   if(tOld.day != t.day || tOld.month != t.month || tOld.dotw != t.dotw){ // avoid updating the date label too often (increases FPS)
     lv_label_set_text_fmt(dateLabel, "%s, %d. %s", weekdays_GERMAN[t.dotw], t.day, months_GERMAN[t.month]);
