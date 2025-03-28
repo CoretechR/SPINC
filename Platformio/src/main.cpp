@@ -82,6 +82,8 @@ lv_obj_t* minuteButtonL;
 lv_obj_t* hourButtonL;
 lv_obj_t* formatButton;
 lv_obj_t* formatButtonL;
+lv_obj_t* languageButton;
+lv_obj_t* languageButtonL;
 lv_timer_t * returnTimer = NULL;
 lv_timer_t * hintTimer = NULL;
 bool buttonHintsVisible = true;
@@ -106,15 +108,61 @@ datetime_t t = {
 .sec = 00
 };
 datetime_t tOld;
+enum LANGUAGE {ENGLISH, GERMAN};
+LANGUAGE language_order[] = { ENGLISH, GERMAN };
+int language = language_order[0];
 const char* weekdays_GERMAN[7] = {"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"};
 const char* months_GERMAN[13] = {"", "Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"};
 const char* weekdays_ENGLISH[7] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 const char* months_ENGLISH[13] = {"", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
 boolean hourFormat24 = true;
 
+char const * get_language_name(int language){
+  switch (language){
+    case ENGLISH:
+      return "English";
+    case GERMAN:
+      return "German";
+  }
+  return "";
+}
+
+char const * get_weekday_name(int day){
+  switch (language){
+    case ENGLISH:
+      return weekdays_ENGLISH[day];
+    case GERMAN:
+      return weekdays_GERMAN[day];
+  }
+  return "";
+}
+
+char const * get_month_name(int day){
+  switch (language){
+    case ENGLISH:
+      return months_ENGLISH[day];
+    case GERMAN:
+      return months_GERMAN[day];
+  }
+  return "";
+}
+
+void cycle_language() {
+  language = (language + 1) % (sizeof(language_order) / sizeof(language_order[0]));
+}
+
 // State machine declarations
 enum FSM_STATE {WAKEUP, IDLE, FEED, CONTACT, CHARGE, ENDCHARGE};
 int fsm_currentState = IDLE;
+
+void draw_clock(datetime_t t) {
+  if(!hourFormat24 && t.hour > 12) lv_label_set_text_fmt(timeLabel, "%d:%02d", t.hour-12, t.min);
+  else lv_label_set_text_fmt(timeLabel, "%d:%02d", t.hour, t.min);
+}
+
+void draw_date(datetime_t) {
+  lv_label_set_text_fmt(dateLabel, "%s, %d. %s", get_weekday_name(t.dotw), t.day, get_month_name(t.month));
+}
 
 // Display flushing
 void my_disp_flush( lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p ){
@@ -250,7 +298,7 @@ static void weekday_button_event_cb(lv_event_t * e)
         rtc_set_datetime(&t);
         lv_obj_t * btn = lv_event_get_target(e);
         lv_obj_t * label = lv_obj_get_child(btn, 0);
-        lv_label_set_text(label, weekdays_GERMAN[t.dotw]);
+        lv_label_set_text(label, get_weekday_name(t.dotw));
     }
 }
 
@@ -279,6 +327,17 @@ static void format_button_event_cb(lv_event_t * e)
         if(hourFormat24) lv_label_set_text_fmt(formatButtonL, "24h");
         else lv_label_set_text_fmt(formatButtonL, "12h");
         //Serial.println(hourFormat24);
+    }
+}
+
+static void language_button_event_cb(lv_event_t * e)
+{
+    if(lv_event_get_code(e) == LV_EVENT_CLICKED) {
+        cycle_language();
+        lv_label_set_text_fmt(languageButtonL, get_language_name(language));
+        rtc_get_datetime(&t);
+        draw_date(t);
+        lv_label_set_text(weekdayButtonL, get_weekday_name(t.dotw));
     }
 }
 
@@ -677,7 +736,7 @@ void setup() {
   lv_obj_align(weekdayButton, LV_ALIGN_TOP_LEFT, 202, 44);
   lv_obj_set_size(weekdayButton, 104, 30);
   lv_obj_set_style_bg_color(weekdayButton, lv_color_black(), LV_PART_MAIN);
-  lv_label_set_text(weekdayButtonL, weekdays_GERMAN[t.dotw]);
+  lv_label_set_text(weekdayButtonL, get_weekday_name(t.dotw));
   lv_obj_set_style_text_font(weekdayButtonL, &lv_font_montserrat_16, LV_PART_MAIN);
   lv_obj_align(weekdayButtonL, LV_ALIGN_CENTER, 0, 0);  
   lv_obj_set_style_outline_opa(weekdayButton, 255, LV_STATE_FOCUS_KEY);
@@ -735,6 +794,26 @@ void setup() {
   lv_obj_set_style_outline_opa(formatButton, 255, LV_STATE_FOCUS_KEY);
   lv_obj_add_event_cb(formatButton, format_button_event_cb, LV_EVENT_CLICKED, NULL);
 
+  // Language Setting
+
+  tempLabel = lv_label_create(tab2);
+  lv_label_set_text(tempLabel, "Language:");
+  lv_obj_set_style_text_color(tempLabel, lv_color_white(), LV_PART_MAIN);
+  lv_obj_set_style_text_font(tempLabel, &lv_font_montserrat_16, LV_PART_MAIN);
+  lv_obj_center(tempLabel);
+  lv_obj_align(tempLabel, LV_ALIGN_TOP_LEFT, 0, 152);
+
+  languageButton = lv_btn_create(tab2);
+  languageButtonL = lv_label_create(languageButton);
+  lv_obj_align(languageButton, LV_ALIGN_TOP_LEFT, 94, 146);
+  lv_obj_set_size(languageButton, 90, 30);
+  lv_obj_set_style_bg_color(languageButton, lv_color_black(), LV_PART_MAIN);
+  lv_label_set_text(languageButtonL, get_language_name(language));
+  lv_obj_set_style_text_font(languageButtonL, &lv_font_montserrat_16, LV_PART_MAIN);
+  lv_obj_align(languageButtonL, LV_ALIGN_CENTER, 0, 0);
+  lv_obj_set_style_outline_opa(languageButton, 255, LV_STATE_FOCUS_KEY);
+  lv_obj_add_event_cb(languageButton, language_button_event_cb, LV_EVENT_CLICKED, NULL);
+
   // Return Button
 
   lv_obj_t* returnButton = lv_btn_create(tab2);
@@ -759,6 +838,7 @@ void setup() {
   lv_group_add_obj(group, hourButton);
   lv_group_add_obj(group, minuteButton);
   lv_group_add_obj(group, formatButton);
+  lv_group_add_obj(group, languageButton);
   lv_group_add_obj(group, returnButton);
   /* Assign the input device to the group */
   lv_indev_set_group(indev, group);
@@ -850,11 +930,10 @@ void loop() {
   // Update the clock display
   rtc_get_datetime(&t);
   if(tOld.min != t.min || tOld.hour != t.hour){ // avoid updating the time label too often (increases FPS)
-    if(!hourFormat24 && t.hour > 12) lv_label_set_text_fmt(timeLabel, "%d:%02d", t.hour-12, t.min);
-    else lv_label_set_text_fmt(timeLabel, "%d:%02d", t.hour, t.min);
+    draw_clock(t);
   }
   if(tOld.day != t.day || tOld.month != t.month || tOld.dotw != t.dotw){ // avoid updating the date label too often (increases FPS)
-    lv_label_set_text_fmt(dateLabel, "%s, %d. %s", weekdays_GERMAN[t.dotw], t.day, months_GERMAN[t.month]);
+    draw_date(t);
   }
   tOld = t;
 
