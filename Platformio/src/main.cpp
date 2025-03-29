@@ -66,6 +66,7 @@ lv_color_t color_primary = lv_color_hex(0x303030); // gray
 lv_obj_t * timeLabel;
 lv_obj_t * dateLabel;
 lv_obj_t * infoLabel;
+lv_obj_t * subInfoLabel;
 extern const lv_font_t rubik_140;
 lv_obj_t* tabview;
 lv_obj_t* dayButton;
@@ -482,23 +483,25 @@ void fsm_charge(){
   switch((millis() / 500) % 4){
     case 0: 
       //lv_label_set_text_fmt(infoLabel, LV_SYMBOL_BATTERY_1);
-      lv_label_set_text_fmt(infoLabel, "%.2fV  %s", abs(getVBat()), LV_SYMBOL_BATTERY_1);
+      lv_label_set_text(infoLabel, LV_SYMBOL_BATTERY_1);
       break;
     case 1: 
-      lv_label_set_text_fmt(infoLabel, "%.2fV  %s", abs(getVBat()), LV_SYMBOL_BATTERY_2);
+      lv_label_set_text(infoLabel, LV_SYMBOL_BATTERY_2);
       break;
     case 2: 
-      lv_label_set_text_fmt(infoLabel, "%.2fV  %s", abs(getVBat()), LV_SYMBOL_BATTERY_3);
+      lv_label_set_text(infoLabel, LV_SYMBOL_BATTERY_3);
       break;
     case 3: 
-      lv_label_set_text_fmt(infoLabel, "%.2fV  %s", abs(getVBat()), LV_SYMBOL_BATTERY_FULL);
+      lv_label_set_text(infoLabel, LV_SYMBOL_BATTERY_FULL);
       break;
   }
+  lv_label_set_text_fmt(subInfoLabel, "%.2fV", abs(getVBat()));
   
   // Detect end of charge or fault condition
   if(digitalRead(CHG_STAT) == HIGH){
     // clear info label
     lv_label_set_text_fmt(infoLabel, "");
+    lv_label_set_text_fmt(subInfoLabel, "");
     fsm_currentState = ENDCHARGE;
   }  
 }
@@ -506,6 +509,7 @@ void fsm_charge(){
 void fsm_endcharge(){
   // update info label
   lv_label_set_text_fmt(infoLabel, "Ejecting Cell...");
+  lv_label_set_text_fmt(subInfoLabel, "");
   lv_timer_handler();
   servo.attach(PWM_SERVO);
 
@@ -640,6 +644,13 @@ void setup() {
   lv_obj_set_style_text_font(infoLabel, &lv_font_montserrat_24, LV_PART_MAIN);
   lv_obj_center(infoLabel);
   lv_obj_set_pos(infoLabel, 0, 74);
+
+  subInfoLabel = lv_label_create(tab1);
+  lv_label_set_text(subInfoLabel, "");
+  lv_obj_set_style_text_color(subInfoLabel, lv_color_white(), LV_PART_MAIN);
+  lv_obj_set_style_text_font(subInfoLabel, &lv_font_montserrat_24, LV_PART_MAIN);
+  lv_obj_center(subInfoLabel);
+  lv_obj_set_pos(subInfoLabel, 0, 100);
 
   // Eject Button
 
